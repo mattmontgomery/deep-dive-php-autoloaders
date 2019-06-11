@@ -1,0 +1,13 @@
+{
+    "name": "mmontgomery/3-composer",
+    "authors": [
+        {
+            "name": "Matt Montgomery",
+            "email": "montgomery.matt@gmail.com"
+        }
+    ],
+    "require": {
+        "symfony/console": "^4.3",
+        "symfony/debug": "^4.3"
+    }
+}
