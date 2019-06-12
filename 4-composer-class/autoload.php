@@ -11,7 +11,7 @@ class Autoload {
     private function readVendorComposerFiles(string $vendorPath)
     {
         if (!file_exists($vendorPath)) {
-            throw new \Exception(sprintf("Could not read vendor path (%s)", $vendorPath));
+            return false;
         }
         $directoryContents = scandir($vendorPath);
         $paths = array_map(function($path) use ($vendorPath) {
@@ -49,8 +49,8 @@ class Autoload {
         try {
             $composer = json_decode(file_get_contents($composerPath), true);
             if (!empty($composer['autoload']['psr-4'])) {
-                foreach ($composer['autoload']['psr-4'] as $psr4 => $dirPath) {
-                    $this->register($path, $psr4, $dirPath);
+                foreach ($composer['autoload']['psr-4'] as $psr4 => $subDirectory) {
+                    $this->registerNamespace($path, $psr4, $subDirectory);
                 }
             }
         } catch(\Exception $e) {
@@ -58,20 +58,19 @@ class Autoload {
         }
         
     } 
-    public function register(string $basePath, string $baseNamespace, ?string $dirPath): void
+    public function registerNamespace(string $vendorPath, string $vendorNamespace, ?string $subDirectory): void
     {
-        $path = sprintf("%s%s%s", $basePath, $dirPath ? "/" : null, $dirPath);
-        $this->paths[$baseNamespace] = $path;
-        spl_autoload_register(function($className) use ($baseNamespace, $basePath, $path) {
-            // $this->autoloadLogger(sprintf("Checking against %s", $baseNamespace), $className);
-            /**
-             * If this evaluates to 1 or -1, we'll skip autoloading here
-             */
-            if (strncmp($baseNamespace, $className, strlen($baseNamespace)) !== 0) {
-                $this->autoloadLogger(sprintf("Did not pass %s", $baseNamespace), $className);
+        $path = sprintf("%s%s%s", $vendorPath, $subDirectory ? "/" : null, $subDirectory);
+        $this->paths[$vendorNamespace] = $path;
+        spl_autoload_register(function($className) use ($vendorNamespace, $vendorPath, $path) {
+            if (strncmp($vendorNamespace, $className, strlen($vendorNamespace)) !== 0) {
+                $this->autoloadLogger(sprintf("Did not pass %s", $vendorNamespace), $className);
+                /**
+                 * psr-4 2.4 -- should not return a value
+                 */
                 return;
             }
-            $relativeClass = substr($className, strlen($baseNamespace));
+            $relativeClass = substr($className, strlen($vendorNamespace));
             $file = sprintf("%s/%s.php", $path, str_replace('\\', '/', $relativeClass));
             $this->autoloadLogger(sprintf("Looking for %s", $file), $className);
 
@@ -82,13 +81,14 @@ class Autoload {
         });
     }
     private function autoloadLogger(string $message, string $className): void {
-        echo sprintf("[%s] %s\n", $className, $message);
+        echo sprintf("  ~~ %s ~~ %s\n", $className, $message);
     }
     public function debug()
     {
         foreach ($this->paths as $namespace => $path) {
-            echo sprintf("! %s loaded for %s \n", $path, $namespace);
+            echo sprintf("  !~ %s loaded for %s \n", $path, $namespace);
         }
+        echo "\n\n\n";
     }
 }
 

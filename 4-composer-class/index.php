@@ -6,11 +6,13 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Debug\Debug;
 use Psr\Log\AbstractLogger;
 
-echo sprintf("** %s loaded\n\n", get_class(new Command()));
-echo sprintf("** %s loaded\n\n", get_class(new Debug()));
 
 class Logger extends AbstractLogger {
     public function log($level, $message, array $context = []) {
-        print_r($message);
+        print_r(sprintf("[%s] %s", date("Y-m-d h:i:s"), $message));
     }
 }
+
+$logger = new Logger();
+$logger->info(sprintf("** %s loaded\n\n", get_class(new Command())));
+$logger->info(sprintf("** %s loaded\n\n", get_class(new Debug())));
